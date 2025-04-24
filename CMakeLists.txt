@@ -2,14 +2,44 @@ cmake_minimum_required(VERSION 3.8)
 project(ac_semi_2025)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  # C++23を使う
+  add_compile_options(-Wall -Wextra -Wpedantic -std=c++23)
 endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+#include pathを通す
+include_directories(include)
+
+# メッセージ型の生成
+rosidl_generate_interfaces(${PROJECT_NAME}
+  msg/Pose2d.msg
+)
+ament_export_dependencies(rosidl_default_runtime)
+
+# 同一パッケージ内のメッセージ型を使いたいときのお約束
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp
+)
+
+add_executable(test_node src/test_node.cpp)
+ament_target_dependencies(test_node
+  rclcpp
+  sensor_msgs
+)
+# これも必要
+target_link_libraries(test_node "${cpp_typesupport_target}")
+
+install(TARGETS
+  test_node
+  DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
