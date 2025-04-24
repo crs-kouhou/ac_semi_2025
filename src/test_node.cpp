@@ -7,6 +7,7 @@
 #include <string_view>
 #include <filesystem>
 #include <print>
+#include <mutex>
 
 #include "ac_semi_2025/utility.hpp"
 #include "ac_semi_2025/geometry.hpp"
@@ -137,9 +138,14 @@ namespace test {
 		// /// @todo 外界の初期化
 		rclcpp::init(argc, argv);
 		auto node_sp = std::make_shared<RosWorld>();
-		std::jthread thread2{[node_sp] {
+		std::mutex node_mtx{};
+		std::jthread thread2{[node_sp, &node_mtx, &stop_flag] {
 			std::println("ros node start.");
-			rclcpp::spin(node_sp);
+			while(stop_flag.load()) {
+				std::lock_guard lck{node_mtx};
+				rclcpp::spin_some(node_sp);
+			}
+			rclcpp::shutdown();
 		}};
 
 		/// ロボットの初期化
@@ -165,7 +171,10 @@ namespace test {
 		while(stop_flag.load()) {
 			// std::println("in loop.");
 			// calc world /////////////////////////////////////////////////////////////////////////
-			const auto laserscan = node_sp->update(control_input, sim_clock.lap().count());
+			const auto laserscan = [node_sp, &node_mtx, &control_input, &sim_clock] {
+				std::lock_guard lck{node_mtx};
+				return node_sp->update(control_input, sim_clock.lap().count());
+			}();
 			if(laserscan.cols() == 0) continue;
 
 			// calc robot /////////////////////////////////////////////////////////////////////////
@@ -176,7 +185,6 @@ namespace test {
 			// sim_state.snap(logger);
 			// rb_state.snap(logger);
 		}
-		rclcpp::shutdown();
 	}
 }
 
