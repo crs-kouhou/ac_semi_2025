@@ -3,6 +3,8 @@
 #include <concepts>
 #include <vector>
 #include <utility>
+#include <string>
+#include <format>
 
 #include <eigen3/Eigen/Dense>
 
@@ -26,6 +28,10 @@ namespace ac_semi_2025::geometry::impl {
 			auto ret = Isometry2d::Identity();
 			ret.rotate(this->th).pretranslate(this->xy);
 			return ret;
+		}
+
+		constexpr auto to_str() const noexcept -> std::string {
+			return std::format("xy : {{{}, {}}}, th : {}", this->xy(0), this->xy(1), this->th);
 		}
 
 		friend constexpr auto operator*(const Pose2d& l, const double r) noexcept -> Pose2d {
