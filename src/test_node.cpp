@@ -5,14 +5,14 @@
 #include <chrono>
 #include <string_view>
 
-#include "utility.hpp"
-#include "geometry.hpp"
-#include "sparse_matrix.hpp"
-#include "icp_on_svd.hpp"
-#include "read_edges.hpp"
-// #include "global_map.hpp"
-#include "ros_world.hpp"
-#include "carrot_pursuit.hpp"
+#include "ac_semi_2025/utility.hpp"
+#include "ac_semi_2025/geometry.hpp"
+#include "ac_semi_2025/sparse_matrix.hpp"
+#include "ac_semi_2025/icp_on_svd.hpp"
+#include "ac_semi_2025/read_edges.hpp"
+// #include "ac_semi_2025/global_map.hpp"
+#include "ac_semi_2025/ros_world.hpp"
+#include "ac_semi_2025/carrot_pursuit.hpp"
 
 namespace test {
 	using Eigen::Matrix2Xd;
@@ -150,6 +150,7 @@ namespace test {
 		while(stop_flag.load()) {
 			// calc world /////////////////////////////////////////////////////////////////////////
 			const auto laserscan = node.update(control_input, sim_clock.lap().count());
+			if(laserscan.cols() == 0) continue;
 
 			// calc robot /////////////////////////////////////////////////////////////////////////
 			control_input = robot_update(rb_cons, rb_state, laserscan, robo_clock.lap().count());
