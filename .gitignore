@@ -1,4 +1,5 @@
 *.exe
 /data/
+!/data/spring25.npy
 /py/uv.lock
 /py/.venv
