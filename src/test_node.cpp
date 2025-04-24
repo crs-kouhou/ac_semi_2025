@@ -1,9 +1,12 @@
 #include <thread>
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <chrono>
 #include <string_view>
+#include <filesystem>
+#include <print>
 
 #include "ac_semi_2025/utility.hpp"
 #include "ac_semi_2025/geometry.hpp"
@@ -83,12 +86,19 @@ namespace test {
 		}
 	};
 
-	void main() {
+	void main(int argc, char ** argv) {
 		using namespace std::string_view_literals;
+
+		if(const auto cwd = std::filesystem::current_path().string();
+			!cwd.ends_with("ws/")
+			&& !cwd.ends_with("ws")
+		) {
+			std::println(std::cerr, "cwd may not be a workspace directory");
+		}
 
 		/// グローバルな図形情報を読み出し
 		std::vector<Line2d> global_edges = [] {
-			if(const auto res = read_edges("data/field.dat"sv)) {
+			if(const auto res = read_edges("src/ac_semi_2025/data/field.dat"sv)) {
 				std::vector<Line2d> ret{};
 				for(const auto& polygon : res.value()) {
 					const auto lines = polygon.to_edges();
@@ -105,7 +115,7 @@ namespace test {
 
 		/// ルート情報を読み出し
 		Polyline2d route = [] {
-			if(const auto res = read_route("data/test_route.dat"sv)) {
+			if(const auto res = read_route("src/ac_semi_2025/data/test_route.dat"sv)) {
 				return res.value();
 			}
 			else {
@@ -118,14 +128,19 @@ namespace test {
 
 		// 終了用のキー受付
 		std::atomic_bool stop_flag{true};
-		std::jthread{[&stop_flag] {
+		std::jthread thread1{[&stop_flag] {
 			char dummy;
 			std::cin >> dummy;
 			stop_flag.store(false);
 		}};
 
 		// /// @todo 外界の初期化
-		RosWorld node{};
+		rclcpp::init(argc, argv);
+		auto node_sp = std::make_shared<RosWorld>();
+		std::jthread thread2{[node_sp] {
+			std::println("ros node start.");
+			rclcpp::spin(node_sp);
+		}};
 
 		/// ロボットの初期化
 		RobotConstant rb_cons {
@@ -148,20 +163,23 @@ namespace test {
 		auto robo_clock = MyClock::make();
 		// メインループ
 		while(stop_flag.load()) {
+			// std::println("in loop.");
 			// calc world /////////////////////////////////////////////////////////////////////////
-			const auto laserscan = node.update(control_input, sim_clock.lap().count());
+			const auto laserscan = node_sp->update(control_input, sim_clock.lap().count());
 			if(laserscan.cols() == 0) continue;
 
 			// calc robot /////////////////////////////////////////////////////////////////////////
 			control_input = robot_update(rb_cons, rb_state, laserscan, robo_clock.lap().count());
 
 			// snapshot ///////////////////////////////////////////////////////////////////////////
+			std::println("{}", control_input.to_str());
 			// sim_state.snap(logger);
 			// rb_state.snap(logger);
 		}
+		rclcpp::shutdown();
 	}
 }
 
-int main() {
-	test::main();
+int main(int argc, char ** argv) {
+	test::main(argc, argv);
 }
