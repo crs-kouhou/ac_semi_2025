@@ -21,11 +21,11 @@ branch = 801
 acc_x = 0
 reclist = [
     [acc_x := acc_x + 0, 0, width, height],
-    [acc_x := acc_x + 1000 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 1000 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
     [acc_x := acc_x + 550 + wd, 0, -wd, branch],
-    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
-    [acc_x := acc_x + 1351 + wd, 0, -wd, branch],
-    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 1351 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 550 + wd, 0, -wd, branch],
 ]
 
 linesgroup = []
