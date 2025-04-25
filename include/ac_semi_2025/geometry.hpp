@@ -25,7 +25,7 @@ namespace ac_semi_2025::geometry::impl {
 		Vector2d xy;
 		double th;
 
-		constexpr auto homogeneus_transform() const noexcept -> Isometry2d {
+		constexpr auto homogeneous_transform() const noexcept -> Isometry2d {
 			auto ret = Isometry2d::Identity();
 			ret.rotate(this->th).pretranslate(this->xy);
 			return ret;

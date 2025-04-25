@@ -43,7 +43,7 @@ namespace ac_semi_2025::global_map::impl {
 		/// @todo 一部でも見える曲線は全て載せてしまっている。手前の曲線の端点を通る光線で、奥の曲線をぶった切るべき
 		auto make_visible_lines(const Pose2d& pose) const noexcept -> std::vector<Edge_> {
 			const i64 n = this->positions.size();
-			const auto global2local = pose.homogeneus_transform().inverse();
+			const auto global2local = pose.homogeneous_transform().inverse();
 
 			// マップ曲線をローカル極座標系に持ってくる
 			struct RThetaVertex final {
