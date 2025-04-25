@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <concepts>
 #include <vector>
 #include <utility>
@@ -40,6 +41,10 @@ namespace ac_semi_2025::geometry::impl {
 
 		friend constexpr auto operator+(const Pose2d& l, const Pose2d& r) noexcept -> Pose2d {
 			return Pose2d{l.xy + r.xy, l.th + r.th};
+		}
+
+		constexpr auto not_nan() const noexcept -> bool {
+			return !std::isnan(this->xy(0)) && !std::isnan(this->xy(1)) && !std::isnan(this->th);
 		}
 	};
 

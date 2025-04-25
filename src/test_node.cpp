@@ -39,6 +39,7 @@ namespace test {
 	};
 	struct RobotState final {
 		Pose2d pose;
+		Pose2d icped_pose;
 		i64 closest_milestone_index;
 	};
 
@@ -56,6 +57,7 @@ namespace test {
 		}
 		const auto new_pose = icp_p2l(laserscan, edges, cons.number_of_iteration);
 
+
 		// calc control input /////////////////////////////////////////////////////////////////////
 		const auto speed = cons.carrot.update(cons.route.vertices, new_pose, state.closest_milestone_index);
 		if(!speed.has_value()) {
@@ -63,7 +65,11 @@ namespace test {
 		}
 
 		// update state ///////////////////////////////////////////////////////////////////////////
-		state.pose = new_pose + *speed * dt;
+		const auto state_pose = new_pose + *speed * dt;
+		if(state_pose.not_nan()) {
+			state.pose = state_pose;
+		}
+		state.icped_pose = new_pose;
 
 		return *speed;
 	}
@@ -160,6 +166,7 @@ namespace test {
 		};
 		RobotState rb_state {
 			.pose = Pose2d{Vector2d::Zero(), 0.0}
+			, .icped_pose = Pose2d{Vector2d::Zero(), 0.0}
 			, .closest_milestone_index = 0
 		};
 
@@ -182,6 +189,7 @@ namespace test {
 
 			// snapshot ///////////////////////////////////////////////////////////////////////////
 			std::println("{}", control_input.to_str());
+			node_sp->publish_pose(rb_state.icped_pose);
 			// sim_state.snap(logger);
 			// rb_state.snap(logger);
 		}

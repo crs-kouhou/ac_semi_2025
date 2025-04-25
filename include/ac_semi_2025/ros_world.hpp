@@ -23,6 +23,7 @@ namespace ac_semi_2025::ros_world::impl {
 		Matrix2Xd laserscan{};
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr robot_speed_pub;
 		rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
+		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr pose_pub;
 
 		RosWorld():
 			rclcpp::Node{"ros_world"}
@@ -30,6 +31,7 @@ namespace ac_semi_2025::ros_world::impl {
 			, lidar_sub{this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, [this](const sensor_msgs::msg::LaserScan::ConstSharedPtr msg) -> void {
 				this->laserscan_callback(msg);
 			})}
+			, pose_pub{this->create_publisher<ac_semi_2025::msg::Pose2d>("icped_pose", 10)}
 		{}
 
 		virtual ~RosWorld() override = default;
@@ -42,6 +44,14 @@ namespace ac_semi_2025::ros_world::impl {
 			this->robot_speed_pub->publish(msg);
 			/// @todo ここに新しいlaserscanを待つawaitがほしい
 			return this->laserscan;
+		}
+
+		void publish_pose(const Pose2d& pose) const noexcept {
+			ac_semi_2025::msg::Pose2d msg{};
+			msg.x = pose.xy(0);
+			msg.y = pose.xy(1);
+			msg.th = pose.th;
+			this->pose_pub->publish(msg);
 		}
 
 		void laserscan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg) noexcept {
