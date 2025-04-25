@@ -50,7 +50,7 @@ namespace test {
 
 		// ICP on SVD /////////////////////////////////////////////////////////////////////////////
 		// const auto visible_edges = cons.map.make_visible_lines(pose);
-		const auto g2l = pose.homogeneus_transform().inverse();
+		const auto g2l = pose.homogeneous_transform().inverse();
 		auto edges = cons.global_edges;
 		for(auto& edge : edges) {
 			edge = Line2d{g2l * edge.p1, g2l * edge.p2};
