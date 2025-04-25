@@ -73,7 +73,7 @@ namespace ac_semi_2025::icp_on_svd::impl {
 			static_assert(decltype(cross_covariance)::RowsAtCompileTime == 2 && decltype(cross_covariance)::ColsAtCompileTime == 2);
 
 			// SVD分解
-			JacobiSVD<Matrix2d> svd(cross_covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			JacobiSVD<Matrix2d> svd(cross_covariance, Eigen::ComputeFullU | Eigen::ComputeFullV);
 			const auto u = svd.matrixU();
 			const auto v = svd.matrixV();
 

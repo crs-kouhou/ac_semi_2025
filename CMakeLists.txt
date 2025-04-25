@@ -6,7 +6,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-14")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # C++23を使う
-  add_compile_options(-Wall -Wextra -Wpedantic -std=c++23)
+  add_compile_options(-Wall -Wextra -Wpedantic -std=c++23 -O3)
 endif()
 
 # find dependencies
