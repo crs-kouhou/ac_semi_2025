@@ -37,7 +37,6 @@ namespace ac_semi_2025::icp_on_svd::impl {
 	/// @brief 点群を線分群にfittingする ICP on SVD
 	/// 線分数は点数に比べ十分少ないとする
 	inline auto icp_p2l(const Matrix2Xd& from, std::vector<Line2d> to, const i64 number_of_iteration) noexcept -> Pose2d {
-
 		// fromを、重心を原点とする座標系に変換したものを用意
 		auto from_ = from;
 		const auto from_mean = from.rowwise().mean();
@@ -45,9 +44,9 @@ namespace ac_semi_2025::icp_on_svd::impl {
 		from_.colwise() -= from_mean;  // これ以降from_は変更されない
 
 		// fromをclosest_pointsに合わせる変換を計算し、その変換を合成、toに適用していく
-		auto closest_points = Matrix2Xd{from.rows(), from.cols()};
+		auto closest_points = Matrix2Xd{2, from.cols()};
 		auto total_transform = Isometry2d::Identity();
-		for(i64 iloop = 0; iloop < number_of_iteration; iloop++) {  // とりあえず50回
+		for(i64 iloop = 0; iloop < number_of_iteration; iloop++) {
 			// fromの各点の最近接点を求める
 			for(i64 ip = 0; ip < i64(from.cols()); ++ip) {
 				Vector2d closest_point{};
@@ -64,7 +63,7 @@ namespace ac_semi_2025::icp_on_svd::impl {
 			}
 
 			// closest_pointsを、重心を原点とする座標系に直す
-			const auto closest_points_mean = closest_points.rowwise().mean();
+			const auto closest_points_mean = closest_points.rowwise().mean().eval();
 			static_assert(decltype(closest_points_mean)::RowsAtCompileTime == 2);
 			closest_points.colwise() -= closest_points_mean;
 
