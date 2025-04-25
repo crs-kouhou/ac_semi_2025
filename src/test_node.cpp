@@ -165,7 +165,7 @@ namespace test {
 			, .number_of_iteration = 50
 		};
 		RobotState rb_state {
-			.pose = Pose2d{Vector2d::Zero(), 0.0}
+			.pose = Pose2d{Vector2d{0.5, 0.25}, 0.0}
 			, .icped_pose = Pose2d{Vector2d::Zero(), 0.0}
 			, .closest_milestone_index = 0
 		};
