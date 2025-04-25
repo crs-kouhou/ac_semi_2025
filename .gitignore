@@ -1,3 +1,5 @@
 *.exe
 /py/uv.lock
 /py/.venv
+/src/
+!/src/*.cpp
