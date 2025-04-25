@@ -14,17 +14,18 @@ def Reclist(x, y, sqw, sqh):
 
 
 # (x,y,sqw,sqh)
-wd = 38
+wd = 33
+width = 6019 - wd
+height = 1417 - wd
+branch = 801
+acc_x = 0
 reclist = [
-    [0, 0, 3500 - 2 * wd, 7000 - 2 * wd],
-    [0, 1462 + 1500, 550, wd],
-    [550, 1462, wd, 4038],
-    [550 + wd, 1462 + wd + 962, 1000, wd],
-    [550 + wd, 1462 + 3 * (wd + 962), 1000, wd],
-    [3500 - wd - wd - 897 - wd, 1462, wd, 4038],
-    [550 + wd + 900, 1462, 1000, wd],
-    [550 + wd + 900, 1462 + 2 * (962 + wd), 1000, wd],
-    [550 + wd + 900, 1462 + 4 * (962 + wd), 1000, wd],
+    [acc_x := acc_x + 0, 0, width, height],
+    [acc_x := acc_x + 1000 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 550 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 1351 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
 ]
 
 linesgroup = []
