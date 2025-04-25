@@ -28,6 +28,11 @@ namespace ac_semi_2025::read_edges::impl {
 		if(std::from_chars(s.begin(), s.end(), ret).ec != std::errc{}) {
 			throw std::runtime_error{"parse: fail to parse."};
 		}
+
+		if(std::same_as<T_, double>) {
+			ret /= 1000.0;
+		}
+
 		return ret;
 	}
 
