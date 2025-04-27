@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <print>
 #include <mutex>
+#include <stop_token>
 
 #include "ac_semi_2025/utility.hpp"
 #include "ac_semi_2025/geometry.hpp"
@@ -103,96 +104,102 @@ namespace test {
 			std::println(std::cerr, "cwd may not be a workspace directory");
 		}
 
-		/// グローバルな図形情報を読み出し
-		std::vector<Line2d> global_edges = [] {
-			if(const auto res = read_edges("src/ac_semi_2025/data/field.dat"sv)) {
-				std::vector<Line2d> ret{};
-				for(const auto& polygon : res.value()) {
-					const auto lines = polygon.to_edges();
-					ret.insert(ret.end(), lines.begin(), lines.end());
-				}
-				ret.shrink_to_fit();
-
-				return ret;
-			}
-			else {
-				throw std::runtime_error{res.error()};
-			}
-		}();
-
-		/// ルート情報を読み出し
-		Polyline2d route = [] {
-			if(const auto res = read_route("src/ac_semi_2025/data/test_route.dat"sv)) {
-				return res.value();
-			}
-			else {
-				throw std::runtime_error{res.error()};
-			}
-		}();
-
-		// /// @todo グローバルマップを生成
-		// const auto map = GlobalMap<Line2d>::from_shapes(shapes);
+		// 停止トークン源の作成
+		std::stop_source ssource{};
 
 		// 終了用のキー受付
-		std::atomic_bool stop_flag{true};
-		std::jthread thread1{[&stop_flag] {
+		std::jthread thread1{[&ssource] {
 			char dummy;
 			std::cin >> dummy;
-			stop_flag.store(false);
+			ssource.request_stop();
 		}};
 
 		// /// @todo 外界の初期化
 		rclcpp::init(argc, argv);
-		auto node_sp = std::make_shared<RosWorld>();
-		std::mutex node_mtx{};
-		std::jthread thread2{[node_sp, &node_mtx, &stop_flag] {
-			std::println("ros node start.");
-			while(stop_flag.load()) {
-				std::unique_lock lck{node_mtx};
-				rclcpp::spin_some(node_sp);
+		struct Shutdown final {
+			~Shutdown() {
+				rclcpp::shutdown();
 			}
-			rclcpp::shutdown();
+		} shutdown{};
+		auto node_sp = std::make_shared<RosWorld>(std::move(ssource.get_token()));
+		std::jthread thread2{[node_sp, stoken = ssource.get_token()] {
+			std::println("ros node start.");
+			while(!stoken.stop_requested()) {
+				rclcpp::spin_some(node_sp);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 		}};
 
-		/// ロボットの初期化
-		RobotConstant rb_cons {
-			.global_edges = std::move(global_edges)
-			, .route = std::move(route)
-			, .carrot = CarrotPursuit {
-				.distance_threshold = 5
-				, .speed_determination_destination = 0
-			}
-			, .number_of_iteration = 50
-		};
-		RobotState rb_state {
-			.pose = Pose2d{Vector2d{0.5, 0.25}, 0.0}
-			, .icped_pose = Pose2d{Vector2d::Zero(), 0.0}
-			, .closest_milestone_index = 0
-		};
+		std::jthread thread3{[node_sp, stoken = ssource.get_token()] {
+			/// グローバルな図形情報を読み出し
+			std::vector<Line2d> global_edges = [] {
+				if(const auto res = read_edges("src/ac_semi_2025/data/field.dat"sv)) {
+					std::vector<Line2d> ret{};
+					for(const auto& polygon : res.value()) {
+						const auto lines = polygon.to_edges();
+						ret.insert(ret.end(), lines.begin(), lines.end());
+					}
+					ret.shrink_to_fit();
 
-		Pose2d control_input{Vector2d::Zero(), 0.0};
-
-		auto sim_clock = MyClock::make();
-		auto robo_clock = MyClock::make();
-		// メインループ
-		while(stop_flag.load()) {
-			// std::println("in loop.");
-			// calc world /////////////////////////////////////////////////////////////////////////
-			const auto laserscan = [node_sp, &node_mtx, &control_input, &sim_clock] {
-				std::unique_lock lck{node_mtx};
-				return node_sp->update(control_input, sim_clock.lap().count());
+					return ret;
+				}
+				else {
+					throw std::runtime_error{res.error()};
+				}
 			}();
-			if(laserscan->cols() == 0) continue;
 
-			// calc robot /////////////////////////////////////////////////////////////////////////
-			control_input = robot_update(rb_cons, rb_state, *laserscan, robo_clock.lap().count());
+			// /// @todo グローバルマップを生成
+			// const auto map = GlobalMap<Line2d>::from_shapes(shapes);
 
-			// snapshot ///////////////////////////////////////////////////////////////////////////
-			std::println("{}", control_input.to_str());
-			node_sp->publish_pose(rb_state.icped_pose);
-			// sim_state.snap(logger);
-			// rb_state.snap(logger);
-		}
+			/// ルート情報を読み出し
+			Polyline2d route = [] {
+				if(const auto res = read_route("src/ac_semi_2025/data/test_route.dat"sv)) {
+					return res.value();
+				}
+				else {
+					throw std::runtime_error{res.error()};
+				}
+			}();
+
+			/// ロボットの初期化
+			RobotConstant rb_cons {
+				.global_edges = std::move(global_edges)
+				, .route = std::move(route)
+				, .carrot = CarrotPursuit {
+					.distance_threshold = 5
+					, .speed_determination_destination = 0
+				}
+				, .number_of_iteration = 50
+			};
+			RobotState rb_state {
+				.pose = Pose2d{Vector2d{0.5, 0.25}, 0.0}
+				, .icped_pose = Pose2d{Vector2d::Zero(), 0.0}
+				, .closest_milestone_index = 0
+			};
+
+			Pose2d control_input{Vector2d::Zero(), 0.0};
+
+			auto sim_clock = MyClock::make();
+			auto robo_clock = MyClock::make();
+			// メインループ
+			while(!stoken.stop_requested()) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				// calc world /////////////////////////////////////////////////////////////////////////
+				const auto laserscan = [node_sp, &control_input, &sim_clock] {
+					return node_sp->update(control_input, sim_clock.lap().count());
+				}();
+				if(!laserscan || laserscan->cols() == 0) continue;
+
+				// calc robot /////////////////////////////////////////////////////////////////////////
+				control_input = robot_update(rb_cons, rb_state, *laserscan, robo_clock.lap().count());
+
+				// snapshot ///////////////////////////////////////////////////////////////////////////
+				std::println("{}", control_input.to_str());
+				node_sp->publish_pose(rb_state.icped_pose);
+				// sim_state.snap(logger);
+				// rb_state.snap(logger);
+			}
+		}};
 	}
 }
 
