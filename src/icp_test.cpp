@@ -19,94 +19,7 @@ using Eigen::JacobiSVD;
 using namespace ac_semi_2025::integer_type;
 using namespace ac_semi_2025::geometry;
 using namespace ac_semi_2025::read_edges;
-
-/// @brief 点群を線分群にfittingする ICP on SVD
-/// 線分数は点数に比べ十分少ないとする
-inline auto icp_p2l(const Matrix2Xd& from, std::vector<Line2d> to, const i64 number_of_iteration) noexcept -> Pose2d {
-	// // 出力
-	// std::println("{}", number_of_iteration);
-
-	// fromを、重心を原点とする座標系に変換したものを用意
-	auto from_ = from;
-	const auto from_mean = from.rowwise().mean();
-	static_assert(decltype(from_mean)::RowsAtCompileTime == 2);
-	from_.colwise() -= from_mean;  // これ以降from_は変更されない
-
-	// fromをclosest_pointsに合わせる変換を計算し、その変換を合成、toに適用していく
-	auto closest_points = Matrix2Xd{2, from.cols()};
-	auto total_transform = Isometry2d::Identity();
-	for(i64 iloop = 0; iloop < number_of_iteration; iloop++) {
-		// std::println("{}", to.size());
-		// for(const auto& toi : to) {
-		// 	std::println("{} {} {} {}", toi.p1(0), toi.p2(0), toi.p1(1), toi.p2(1));
-		// }
-
-		// fromの各点の最近接点を求める
-		for(i64 ip = 0; ip < i64(from.cols()); ++ip) {
-			Vector2d closest_point{};
-			double closest_distance = std::numeric_limits<double>::infinity();
-			for (i64 iq = 0; iq < i64(to.size()); iq++) {
-				const auto [point, distance] = closest_p2e(from.col(ip), to[iq]);
-				if(distance < closest_distance) {
-					closest_distance = distance;
-					closest_point = point;
-				}
-			}
-
-			closest_points.col(ip) = closest_point;
-		}
-
-		// std::println("{}", closest_points.cols());
-		// for(i64 i = 0; i < closest_points.cols(); ++i) {
-		// 	std::println("{} {}", closest_points.col(i)(0), closest_points.col(i)(1));
-		// }
-
-		// closest_pointsを、重心を原点とする座標系に直す
-		const auto closest_points_mean = closest_points.rowwise().mean().eval();
-		static_assert(decltype(closest_points_mean)::RowsAtCompileTime == 2);
-		closest_points.colwise() -= closest_points_mean;
-
-		// SVDで最適な剛体変換を求める
-		const auto cross_covariance = (from_) * closest_points.transpose();
-		static_assert(decltype(cross_covariance)::RowsAtCompileTime == 2 && decltype(cross_covariance)::ColsAtCompileTime == 2);
-
-		// SVD分解
-		JacobiSVD<Matrix2d> svd(cross_covariance, Eigen::ComputeFullU | Eigen::ComputeFullV);
-		const auto u = svd.matrixU();
-		const auto v = svd.matrixV();
-
-		// 最適な回転移動を計算(if文内処理の詳細はjres.124.028.pdfなどを参照)
-		auto optimized_rotation = (v * u.transpose()).eval();
-		if(optimized_rotation.determinant() < 0.0) {
-			optimized_rotation(1, 1) = -optimized_rotation(1, 1);
-		}
-
-		// 最適な平行移動を計算
-		auto optimized_translation = closest_points_mean - optimized_rotation * from_mean;
-		static_assert(decltype(optimized_translation)::RowsAtCompileTime == 2 && decltype(optimized_translation)::ColsAtCompileTime == 1);
-
-		// 最適な剛体変換に合わせ、それを蓄積する
-		auto optimized_transform = Isometry2d::Identity();
-		optimized_transform.rotate(optimized_rotation).pretranslate(optimized_translation);
-		// std::println(std::cerr, "translate: {} {}", optimized_translation(0), optimized_translation(1));
-		// std::println(std::cerr, "from_mean: {} {}", from_mean(0), from_mean(1));
-		// std::println(std::cerr, "closest_points_mean: {} {}", closest_points_mean(0), closest_points_mean(1));
-
-		total_transform = optimized_transform * total_transform;
-
-		// 線分数が十分に小さいため計算が少なくて済むよう、toのほうを動かしてやる。適用すべきは逆変換である事に注意
-		const auto inv_transform = optimized_transform.inverse();
-		for(auto& toi : to) {
-			toi.p1 = inv_transform * toi.p1;
-			toi.p2 = inv_transform * toi.p2;
-		}
-	}
-
-	// Pose2Dにして返す
-	const auto translation = total_transform.translation();
-	const auto rotation = total_transform.rotation();
-	return Pose2d{translation, std::atan2(rotation(1, 0), rotation(0, 0))};
-}
+using namespace ac_semi_2025::icp_on_svd;
 
 int main() {
 	using namespace std::string_view_literals;
@@ -196,7 +109,7 @@ int main() {
 	// 	std::println("{} {}", pi(0), pi(1));
 	// }
 	const auto start = std::chrono::high_resolution_clock::now();
-	icp_p2l(points, l, 50);
+	for(i64 i = 0; i < 1000; ++i) icp_p2l(points, l, 50);
 	const auto end = std::chrono::high_resolution_clock::now();
 	std::println(std::cerr, "end: {}", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 }
