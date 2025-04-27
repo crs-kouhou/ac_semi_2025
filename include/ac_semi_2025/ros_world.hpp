@@ -2,6 +2,9 @@
 
 #include <cmath>
 #include <utility>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
 
 #include <eigen3/Eigen/Dense>
 
@@ -20,7 +23,9 @@ namespace ac_semi_2025::ros_world::impl {
 	using geometry::Pose2d;
 
 	struct RosWorld final : rclcpp::Node {
-		Matrix2Xd laserscan{};
+		std::unique_ptr<Matrix2Xd> laserscan{};
+		std::condition_variable condvar{};
+		std::mutex mtx{};
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr robot_speed_pub;
 		rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr pose_pub;
@@ -36,14 +41,19 @@ namespace ac_semi_2025::ros_world::impl {
 
 		virtual ~RosWorld() override = default;
 
-		auto update(const Pose2d& robot_speed, const double) const noexcept -> Matrix2Xd {
+		auto update(const Pose2d& robot_speed, const double) noexcept -> std::unique_ptr<Matrix2Xd> {
 			ac_semi_2025::msg::Pose2d msg{};
 			msg.x = robot_speed.xy(0);
 			msg.y = robot_speed.xy(1);
 			msg.th = robot_speed.th;
 			this->robot_speed_pub->publish(msg);
-			/// @todo ここに新しいlaserscanを待つawaitがほしい
-			return this->laserscan;
+			{
+				std::unique_lock lck{this->mtx};
+				this->condvar.wait(lck, [this] -> bool {
+					return static_cast<bool>(this->laserscan);
+				});
+				return std::move(this->laserscan);
+			}
 		}
 
 		void publish_pose(const Pose2d& pose) const noexcept {
@@ -65,7 +75,10 @@ namespace ac_semi_2025::ros_world::impl {
 				const double th = angle_min + angle_increment * i;
 				laserscan.col(i) = ranges[i] * Vector2d{std::cos(th), std::sin(th)};
 			}
-			this->laserscan = std::move(laserscan);
+			{
+				std::unique_lock lck{this->mtx};
+				this->laserscan = std::make_unique<Matrix2Xd>(std::move(laserscan));
+			}
 		}
 	};
 }

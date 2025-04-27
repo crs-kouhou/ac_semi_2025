@@ -148,7 +148,7 @@ namespace test {
 		std::jthread thread2{[node_sp, &node_mtx, &stop_flag] {
 			std::println("ros node start.");
 			while(stop_flag.load()) {
-				std::lock_guard lck{node_mtx};
+				std::unique_lock lck{node_mtx};
 				rclcpp::spin_some(node_sp);
 			}
 			rclcpp::shutdown();
@@ -179,13 +179,13 @@ namespace test {
 			// std::println("in loop.");
 			// calc world /////////////////////////////////////////////////////////////////////////
 			const auto laserscan = [node_sp, &node_mtx, &control_input, &sim_clock] {
-				std::lock_guard lck{node_mtx};
+				std::unique_lock lck{node_mtx};
 				return node_sp->update(control_input, sim_clock.lap().count());
 			}();
-			if(laserscan.cols() == 0) continue;
+			if(laserscan->cols() == 0) continue;
 
 			// calc robot /////////////////////////////////////////////////////////////////////////
-			control_input = robot_update(rb_cons, rb_state, laserscan, robo_clock.lap().count());
+			control_input = robot_update(rb_cons, rb_state, *laserscan, robo_clock.lap().count());
 
 			// snapshot ///////////////////////////////////////////////////////////////////////////
 			std::println("{}", control_input.to_str());
