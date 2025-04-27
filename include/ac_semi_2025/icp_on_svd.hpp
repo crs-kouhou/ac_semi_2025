@@ -38,10 +38,13 @@ namespace ac_semi_2025::icp_on_svd::impl {
 	/// 線分数は点数に比べ十分少ないとする
 	inline auto icp_p2l(const Matrix2Xd& from, std::vector<Line2d> to, const i64 number_of_iteration) noexcept -> Pose2d {
 		// fromを、重心を原点とする座標系に変換したものを用意
-		auto from_ = from;
-		const auto from_mean = from.rowwise().mean();
-		static_assert(decltype(from_mean)::RowsAtCompileTime == 2);
-		from_.colwise() -= from_mean;  // これ以降from_は変更されない
+		const auto [from_, from_mean] = [&from] {
+			auto from_ = from;
+			const auto from_mean = from.rowwise().mean();
+			static_assert(decltype(from_mean)::RowsAtCompileTime == 2);
+			from_.colwise() -= from_mean;
+			return std::pair{std::move(from_), std::move(from_mean)};
+		}();
 
 		// fromをclosest_pointsに合わせる変換を計算し、その変換を合成、toに適用していく
 		auto closest_points = Matrix2Xd{2, from.cols()};
@@ -49,7 +52,7 @@ namespace ac_semi_2025::icp_on_svd::impl {
 		for(i64 iloop = 0; iloop < number_of_iteration; iloop++) {
 			// fromの各点の最近接点を求める
 			for(i64 ip = 0; ip < i64(from.cols()); ++ip) {
-				Vector2d closest_point{};
+				Vector2d closest_point{0.0, 0.0};
 				double closest_distance = std::numeric_limits<double>::infinity();
 				for (i64 iq = 0; iq < i64(to.size()); iq++) {
 					const auto [point, distance] = closest_p2e(from.col(ip), to[iq]);
