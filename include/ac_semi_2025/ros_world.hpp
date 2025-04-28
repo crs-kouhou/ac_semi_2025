@@ -92,7 +92,7 @@ namespace ac_semi_2025::ros_world::impl {
 			geometry_msgs::msg::TransformStamped msg{};
 			msg.header.frame_id = "map";
 			msg.header.stamp = this->now();
-			msg.child_frame_id = "laser";
+			msg.child_frame_id = "base_link";
 			msg.transform.translation.x = pose.xy(0);
 			msg.transform.translation.y = pose.xy(1);
 			msg.transform.translation.z = 0.0;
@@ -128,7 +128,7 @@ namespace ac_semi_2025::ros_world::impl {
 					|| msg->range_max <= ranges[i]
 				) continue;
 
-				laserscan.col(net_points) = ranges[i] * Vector2d{std::cos(th), std::sin(th)};
+				laserscan.col(net_points) = ranges[i] * Vector2d{std::cos(-th), std::sin(-th)};
 				net_points++;
 			}
 			laserscan = laserscan.leftCols(net_points);

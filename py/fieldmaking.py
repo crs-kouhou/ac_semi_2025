@@ -22,11 +22,11 @@ branch = 801
 acc_x = 0
 reclist = [
     [acc_x := acc_x + 0, 0, width, height],
-    [acc_x := acc_x + 1000 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 1000 + wd, height, -wd, -branch],
+    [acc_x := acc_x + 550 + wd, 0, -wd, branch],
     [acc_x := acc_x + 550 + wd, height, -wd, -branch],
-    [acc_x := acc_x + 550 + wd, 0, -wd, branch],
-    [acc_x := acc_x + 1351 + wd, height, -wd, -branch],
-    [acc_x := acc_x + 550 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 1351 + wd, 0, -wd, branch],
+    [acc_x := acc_x + 550 + wd, height, -wd, -branch],
 ]
 
 linesgroup = []
@@ -72,7 +72,7 @@ def tamaki():
             , [rec[0] + rec[2], rec[1]]
         ]
         for p1, p2 in zip(ps, ps[1:] + [ps[0]]):
-            drawer.line((p1[0], p1[1], p2[0], p2[1]), fill='black', width=10)
+            drawer.line((p1[0], height - p1[1], p2[0], height - p2[1]), fill='black', width=10)
     
     img.save('../data/testmap.png')
 
