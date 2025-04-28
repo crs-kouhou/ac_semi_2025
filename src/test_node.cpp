@@ -66,11 +66,12 @@ namespace test {
 		}
 
 		// update state ///////////////////////////////////////////////////////////////////////////
-		const auto state_pose = new_pose + *speed * dt;
+		// const auto state_pose = new_pose + *speed * dt;
+		const auto state_pose = new_pose;
 		if(state_pose.not_nan()) {
 			state.pose = state_pose;
+			state.icped_pose = state_pose;
 		}
-		state.icped_pose = new_pose;
 
 		return *speed;
 	}
@@ -176,7 +177,7 @@ namespace test {
 				, .number_of_iteration = 50
 			};
 			RobotState rb_state {
-				.pose = Pose2d{Vector2d{0.5, 0.25}, 0.0}
+				.pose = Pose2d{Vector2d{0.5, 0.5}, 0.0}
 				, .icped_pose = Pose2d{Vector2d::Zero(), 0.0}
 				, .closest_milestone_index = 0
 			};
