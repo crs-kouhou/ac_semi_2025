@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
 
 # 春ロボ2025のフィールド作り
 
@@ -61,6 +62,19 @@ def tamaki():
     with open("../data/field.dat", "w") as f:
         f.write(content)
 
+    img = Image.new("RGB", (width, height), color=(255, 255, 255))
+    drawer = ImageDraw.Draw(img)
+    for rec in reclist:
+        ps = [
+            [rec[0], rec[1]]
+            , [rec[0], rec[1] + rec[3]]
+            , [rec[0] + rec[2], rec[1] + rec[3]]
+            , [rec[0] + rec[2], rec[1]]
+        ]
+        for p1, p2 in zip(ps, ps[1:] + [ps[0]]):
+            drawer.line((p1[0], p1[1], p2[0], p2[1]), fill='black', width=10)
+    
+    img.save('../data/testmap.png')
 
 tamaki()
 
