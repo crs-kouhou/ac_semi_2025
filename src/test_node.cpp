@@ -199,7 +199,7 @@ namespace test {
 
 				// snapshot ///////////////////////////////////////////////////////////////////////////
 				std::println("{}", control_input.to_str());
-				node_sp->publish_pose(rb_state.icped_pose);
+				node_sp->broadcast_pose(rb_state.icped_pose);
 				// sim_state.snap(logger);
 				// rb_state.snap(logger);
 			}

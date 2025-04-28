@@ -10,8 +10,10 @@
 
 #include <eigen3/Eigen/Dense>
 
-#include <sensor_msgs/msg/laser_scan.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <ac_semi_2025/msg/pose2d.hpp>
 
@@ -33,6 +35,7 @@ namespace ac_semi_2025::ros_world::impl {
 		std::stop_token stoken;
 		double th_min;
 		double th_max;
+		tf2_ros::TransformBroadcaster tf2_broadcaster;
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr robot_speed_pub;
 		rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr pose_pub;
@@ -42,11 +45,11 @@ namespace ac_semi_2025::ros_world::impl {
 			, stoken{std::move(stoken)}
 			, th_min{th_min}
 			, th_max{th_max}
+			, tf2_broadcaster{*this}
 			, robot_speed_pub{this->create_publisher<ac_semi_2025::msg::Pose2d>("robot_speed", 10)}
 			, lidar_sub{this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, [this](const sensor_msgs::msg::LaserScan::ConstSharedPtr msg) -> void {
 				this->laserscan_callback(msg);
 			})}
-			, pose_pub{this->create_publisher<ac_semi_2025::msg::Pose2d>("icped_pose", 10)}
 		{}
 
 		virtual ~RosWorld() override = default;
@@ -85,14 +88,27 @@ namespace ac_semi_2025::ros_world::impl {
 			return ret;
 		}
 
-		void publish_pose(const Pose2d& pose) noexcept {
-			ac_semi_2025::msg::Pose2d msg{};
-			msg.x = pose.xy(0);
-			msg.y = pose.xy(1);
-			msg.th = pose.th;
+		void broadcast_pose(const Pose2d& pose) noexcept {
+			geometry_msgs::msg::TransformStamped msg{};
+			msg.header.frame_id = "map";
+			msg.header.stamp = this->now();
+			msg.child_frame_id = "laser";
+			msg.transform.translation.x = pose.xy(0);
+			msg.transform.translation.y = pose.xy(1);
+			msg.transform.translation.z = 0.0;
+			// 以下、ROS2の未整理で辛い型変換の部分。
+			// ここを調べていくと、ROS2から逃れたくなるだろう
+			tf2::Quaternion q{};
+			q.setRPY(0.0, 0.0, pose.th);
+			msg.transform.rotation.x = q.x();  // なんでtf2::Quaternionからrotationへの変換が無いんでしょうね
+			msg.transform.rotation.y = q.y();
+			msg.transform.rotation.z = q.z();
+			msg.transform.rotation.w = q.w();
 			{
 				std::unique_lock lck{this->mtx};
-				this->pose_pub->publish(msg);
+				this->tf2_broadcaster.sendTransform(std::move(msg));
+				std::osyncstream osycerr{std::cerr};
+				std::println(osycerr, "broadcast.");
 			}
 		}
 
