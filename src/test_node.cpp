@@ -121,7 +121,11 @@ namespace test {
 				rclcpp::shutdown();
 			}
 		} shutdown{};
-		auto node_sp = std::make_shared<RosWorld>(std::move(ssource.get_token()));
+		auto node_sp = std::make_shared<RosWorld> (
+			std::move(ssource.get_token())
+			, -std::numbers::pi / 2
+			, std::numbers::pi / 2
+		);
 		std::jthread thread2{[node_sp, stoken = ssource.get_token()] {
 			std::println("ros node start.");
 			while(!stoken.stop_requested()) {

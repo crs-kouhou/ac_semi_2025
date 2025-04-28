@@ -31,13 +31,17 @@ namespace ac_semi_2025::ros_world::impl {
 		std::condition_variable condvar{};
 		std::mutex mtx{};
 		std::stop_token stoken;
+		double th_min;
+		double th_max;
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr robot_speed_pub;
 		rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
 		rclcpp::Publisher<ac_semi_2025::msg::Pose2d>::SharedPtr pose_pub;
 
-		RosWorld(std::stop_token&& stoken):
+		RosWorld(std::stop_token&& stoken, const double th_min, const double th_max):
 			rclcpp::Node{"ros_world"}
 			, stoken{std::move(stoken)}
+			, th_min{th_min}
+			, th_max{th_max}
 			, robot_speed_pub{this->create_publisher<ac_semi_2025::msg::Pose2d>("robot_speed", 10)}
 			, lidar_sub{this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, [this](const sensor_msgs::msg::LaserScan::ConstSharedPtr msg) -> void {
 				this->laserscan_callback(msg);
@@ -98,10 +102,20 @@ namespace ac_semi_2025::ros_world::impl {
 			const double angle_min = msg->angle_min;
 			const double angle_increment = msg->angle_increment;
 			Matrix2Xd laserscan{2, n};
+			i64 net_points = 0;
 			for(i64 i = 0; i < n; ++i) {
 				const double th = angle_min + angle_increment * i;
-				laserscan.col(i) = ranges[i] * Vector2d{std::cos(th), std::sin(th)};
+				
+				if(th < this->th_min
+					|| this->th_max < th
+					|| ranges[i] <= msg->range_min
+					|| msg->range_max <= ranges[i]
+				) continue;
+
+				laserscan.col(net_points) = ranges[i] * Vector2d{std::cos(th), std::sin(th)};
+				net_points++;
 			}
+			laserscan = laserscan.leftCols(net_points);
 			// {
 			// 	std::osyncstream osycerr{std::cerr};
 			// 	std::println(osycerr, "ros_world call.");
