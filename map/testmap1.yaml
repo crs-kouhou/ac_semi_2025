@@ -1,7 +1,0 @@
-image: testmap1.png
-resolution: 0.001  # todo
-origin: [0.0, 0.0, 0.0]  # todo
-# 以降無関係
-negate: 0
-occupied_thresh: 0.6
-free_thresh: 0.4

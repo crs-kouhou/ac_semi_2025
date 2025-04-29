@@ -7,8 +7,8 @@
 
 #include <eigen3/Eigen/Dense>
 
-#include "../include/ac_semi_2025/read_edges.hpp"
-#include "../include/ac_semi_2025/icp_on_svd.hpp"
+#include "../include/read_edges.hpp"
+#include "../include/icp_on_svd.hpp"
 
 using Eigen::Vector2d;
 using Eigen::Matrix2d;
