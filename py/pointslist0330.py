@@ -72,7 +72,7 @@ def Line(x_1, y_1, x_2, y_2, c):
     )
 
 
-field = np.load("../data/spring25.npy")
+field = np.load("../../data/spring25.npy")
 
 
 def Lines(x, c):  # xは線分のリスト
@@ -207,7 +207,7 @@ while running:
 click_positions = np.array(click_positions)
 
 
-destfile = "../data/test_route.dat"
+destfile = "../../data/test_route.dat"
 np.savetxt(destfile, click_positions)
 with open(destfile, "r", encoding="utf-8") as f:
     lines = f.readlines()

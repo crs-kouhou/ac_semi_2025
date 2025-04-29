@@ -42,7 +42,7 @@ for i in range(len(reclist)):
 # 結合
 lines = [line for sublist in linesgroup for line in sublist]
 
-np.save("../data/spring25", lines)
+np.save("../../data/spring25", lines)
 #
 
 
@@ -59,7 +59,7 @@ def tamaki():
     content = f"{len(reclist)}\n"
     for rec in reclist:
         content += to_polygon(rec)
-    with open("../data/field.dat", "w") as f:
+    with open("../../data/field.dat", "w") as f:
         f.write(content)
 
     img = Image.new("RGB", (width, height), color=(255, 255, 255))
@@ -74,7 +74,7 @@ def tamaki():
         for p1, p2 in zip(ps, ps[1:] + [ps[0]]):
             drawer.line((p1[0], height - p1[1], p2[0], height - p2[1]), fill='black', width=10)
     
-    img.save('../data/testmap.png')
+    img.save('../../data/testmap.png')
 
 tamaki()
 
@@ -103,6 +103,6 @@ plt.gca().set_aspect("equal", adjustable="box")  # アスペクト比を1に設�
 p = ConvertPoints(lines)
 
 plt.plot(p[0], p[1], "o", markersize=2)
-plt.savefig("../data/field.jpeg")
+plt.savefig("../../data/field.jpeg")
 # plt.show()
 print(p.shape)
