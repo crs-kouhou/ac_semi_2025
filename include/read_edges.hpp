@@ -39,7 +39,7 @@ namespace ac_semi_2025::read_edges::impl {
 	inline auto read_until(FileChainer& fchainer, const char c) -> std::string_view {
 		char buffer[1024]{};
 		usize size{0};
-		if(!fchainer.read_until(buffer, sizeof(buffer), c, size)) {
+		if(fchainer.read_until(buffer, sizeof(buffer), c, size).is_fail()) {
 			throw std::runtime_error{*fchainer.err};
 		}
 		return std::string_view{buffer, size - 1};
@@ -97,22 +97,22 @@ namespace ac_semi_2025::read_edges::impl {
 		}
 	}
 
-	inline auto read_edges(const std::string_view filepath) -> std::expected<std::vector<Polyline2d>, std::string> {
+	inline auto read_edges(const std::string_view filepath) -> std::expected<std::vector<Polygon2d>, std::string> {
 		try {
 			auto fchainer_ = FileChainer::make(std::string{filepath}.c_str(), FopenMode::r);
 			if(!fchainer_) throw std::runtime_error{fchainer_.error()};
 			auto fchainer = std::move(fchainer_.value());
 
 			const auto n = parse<i64>(readline(fchainer));
-			std::vector<Polyline2d> ret(n);
+			std::vector<Polygon2d> ret(n);
 			for(auto& pline : ret) {
-				pline = read_polyline(fchainer);
+				pline = read_polygon(fchainer);
 			}
 
-			return std::expected<std::vector<Polyline2d>, std::string>{std::in_place, std::move(ret)};
+			return std::expected<std::vector<Polygon2d>, std::string>{std::in_place, std::move(ret)};
 		}
 		catch(const std::runtime_error& e) {
-			return std::expected<std::vector<Polyline2d>, std::string>{std::unexpect, e.what()};
+			return std::expected<std::vector<Polygon2d>, std::string>{std::unexpect, e.what()};
 		}
 	}
 }
