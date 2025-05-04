@@ -25,10 +25,16 @@ namespace ac_semi_2025::geometry::impl {
 		Vector2d xy;
 		double th;
 
-		constexpr auto homogeneous_transform() const noexcept -> Isometry2d {
+		constexpr auto to_isometry() const noexcept -> Isometry2d {
 			auto ret = Isometry2d::Identity();
 			ret.rotate(this->th).pretranslate(this->xy);
 			return ret;
+		}
+
+		static constexpr auto from_isometry(const Isometry2d& isom) noexcept -> Pose2d {
+			auto translation = isom.translation();
+			const auto rotation = isom.rotation();
+			return Pose2d{std::move(translation), std::atan2(rotation(1, 0), rotation(0, 0))};
 		}
 
 		constexpr auto to_str() const noexcept -> std::string {

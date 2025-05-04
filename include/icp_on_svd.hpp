@@ -30,13 +30,12 @@ namespace ac_semi_2025::icp_on_svd::impl {
 
 	using geometry::edge;
 	using geometry::Line2d;
-	using geometry::Pose2d;
 	using geometry::closest_e2e;
 	using geometry::closest_p2e;
 
 	/// @brief 点群を線分群にfittingする ICP on SVD
 	/// 線分数は点数に比べ十分少ないとする
-	inline auto icp_p2l(const Matrix2Xd& from, std::vector<Line2d> to, const i64 number_of_iteration) noexcept -> Pose2d {
+	inline auto icp_p2l(const Matrix2Xd& from, std::vector<Line2d> to, const i64 number_of_iteration/*, auto& debug_node_sp*/) noexcept -> Isometry2d {
 		// fromを、重心を原点とする座標系に変換したものを用意
 		const auto [from_, from_mean] = [&from] {
 			auto from_ = from;
@@ -50,6 +49,12 @@ namespace ac_semi_2025::icp_on_svd::impl {
 		auto closest_points = Matrix2Xd{2, from.cols()};
 		auto total_transform = Isometry2d::Identity();
 		for(i64 iloop = 0; iloop < number_of_iteration; iloop++) {
+			// {
+			// 	using namespace std::string_view_literals;
+			// 	debug_node_sp->publish_polyline(to, "usdusd_laser"sv, "icping_tos"sv);
+			// 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			// }
+
 			// fromの各点の最近接点を求める
 			for(i64 ip = 0; ip < i64(from.cols()); ++ip) {
 				Vector2d closest_point{0.0, 0.0};
@@ -103,23 +108,10 @@ namespace ac_semi_2025::icp_on_svd::impl {
 			}
 		}
 
-		// Pose2Dにして返す
-		const auto translation = total_transform.translation();
-		const auto rotation = total_transform.rotation();
-		return Pose2d{translation, std::atan2(rotation(1, 0), rotation(0, 0))};
-	}
-
-	template<edge Edge_>
-	inline auto icp_e2e(const std::vector<Edge_>& from, const std::vector<Edge_>& to, const i64 number_of_iteration) noexcept -> Pose2d {
-		/// @todo 実装
-		(void) from;
-		(void) to;
-		(void) number_of_iteration;
-		return {};
+		return total_transform;
 	}
 }
 
 namespace ac_semi_2025::icp_on_svd {
 	using impl::icp_p2l;
-	using impl::icp_e2e;
 }
