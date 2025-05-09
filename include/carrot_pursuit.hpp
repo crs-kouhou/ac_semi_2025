@@ -10,6 +10,7 @@
 
 namespace ac_semi_2025::carrot_pursuit::impl {
 	using Eigen::Isometry2d;
+	using Eigen::Rotation2Dd;
 	using Eigen::Vector2d;
 
 	using geometry::Pose2d;
@@ -53,12 +54,14 @@ namespace ac_semi_2025::carrot_pursuit::impl {
 	struct CarrotPursuit final {
 		FeedForwardedPid controller_s;
 		FeedForwardedPid controller_t;
+		FeedForwardedPid controller_th;
 		i64 target_idx{1};
 
-		static auto make(const FeedForwardedPid::Constant& s, const FeedForwardedPid::Constant& t) noexcept -> CarrotPursuit {
+		static auto make(const FeedForwardedPid::Constant& s, const FeedForwardedPid::Constant& t, const FeedForwardedPid::Constant& th) noexcept -> CarrotPursuit {
 			return CarrotPursuit {
 				.controller_s = FeedForwardedPid{s}
 				, .controller_t = FeedForwardedPid{t}
+				, .controller_th = FeedForwardedPid{th}
 			};
 		}
 
@@ -87,9 +90,12 @@ namespace ac_semi_2025::carrot_pursuit::impl {
 			// 各成分を制御器にかけ、その出力を制御入力の機体速度とする
 			const double out_s = this->controller_s.update(p_s, dt);
 			const double out_t = this->controller_t.update(p_t, dt);
-			auto target_speed = out_s * s + out_t * t;
+			const auto target_speed_global = out_s * s + out_t * t;
+			const auto target_speed = Rotation2Dd{-current_pose.th} * target_speed_global;
+
+			const double out_th = this->controller_th.update(-current_pose.th, dt);
 			
-			return Pose2d{target_speed, 0.0};
+			return Pose2d{target_speed, out_th};
 			
 		}
 	};
