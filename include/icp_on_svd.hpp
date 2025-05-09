@@ -30,7 +30,6 @@ namespace ac_semi_2025::icp_on_svd::impl {
 
 	using geometry::edge;
 	using geometry::Line2d;
-	using geometry::closest_e2e;
 	using geometry::closest_p2e;
 
 	/// @brief 点群を線分群にfittingする ICP on SVD
