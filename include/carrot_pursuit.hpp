@@ -66,6 +66,9 @@ namespace ac_semi_2025::carrot_pursuit::impl {
 		}
 
 		auto update(const std::vector<Vector2d> &route, const Pose2d &current_pose, const double dt) noexcept -> std::optional<Pose2d> {
+			if(i64(route.size()) <= this->target_idx) {
+				return Pose2d{Vector2d::Zero(), 0.0};
+			}
 			Vector2d unnormalized_s = (route[this->target_idx] - route[this->target_idx - 1]).eval();
 			Vector2d to_dest = (route[this->target_idx] - current_pose.xy).eval();
 			// this->target_idxは減ることはない。よって機体が軌道上を逆戻りすることはない
@@ -74,6 +77,7 @@ namespace ac_semi_2025::carrot_pursuit::impl {
 			while(unnormalized_s.dot(to_dest) < 0) {
 				++this->target_idx;
 				if (i64(route.size()) <= this->target_idx) {  // ゴールしたら
+					std::println("End");
 					// その場で停止(@todo: ホントはゴールへ近づき、ゴールとの距離や速度が落ち着いてから停止すべき)
 					return Pose2d{Vector2d::Zero(), 0.0};
 				}
