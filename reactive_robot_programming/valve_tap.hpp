@@ -19,8 +19,10 @@
 #include <condition_variable>
 #include <stop_token>
 #include <string>  // debug
+#include <future>
 
-#include "../ac_semi_2025/include/utility.hpp"
+#include "../include/utility.hpp"
+#include "../include/flip_channel.hpp"
 
 namespace ac_semi_2025::valve_tap::impl {
 	// constなメンバ関数は全て並列に実行可能でなければならない
@@ -89,7 +91,7 @@ namespace ac_semi_2025::valve_tap::impl {
 			u8 expected = 0b10;
 			if(this->state.compare_exchange_strong(expected, 0b01)) {
 				this->func_up->do_once(waker);
-				this->state.store(0b00);
+				this->state.fetch_and(0b10);
 			}
 		}
 	};
@@ -221,6 +223,7 @@ namespace ac_semi_2025::valve_tap::impl {
 		}
 	};
 
+	// 雑実装。全然本番使用を考えてない
 	struct ValveExecutor final {
 		std::vector<Valve *> valves;
 		std::unique_ptr<Waker> waker;
@@ -243,12 +246,47 @@ namespace ac_semi_2025::valve_tap::impl {
 		}
 
 		void run() noexcept {
+			using namespace std::chrono_literals;
+
+			auto [th1_valv_send, th1_valv_recv] = flip_channel::channel<Valve *>();
+			auto [th1_end_send, th1_end_recv] = flip_channel::channel<u8>();
+			std::jthread th1{[valv = std::move(th1_valv_recv), end = std::move(th1_end_send), waker_p = this->waker.get()] mutable {
+				end.send(0);
+				while(!waker_p->stoken.stop_requested()) {
+					if(const auto rec = valv.try_recv(10ms)) {
+						(*rec)->mix_up(*waker_p);
+						end.send(0);
+					}
+				}
+			}};
+
+			auto [th2_valv_send, th2_valv_recv] = flip_channel::channel<Valve *>();
+			auto [th2_end_send, th2_end_recv] = flip_channel::channel<u8>();
+			std::jthread th2{[valv = std::move(th2_valv_recv), end = std::move(th2_end_send), waker_p = this->waker.get()] mutable {
+				end.send(0);
+				while(!waker_p->stoken.stop_requested()) {
+					if(const auto rec = valv.try_recv(10ms)) {
+						(*rec)->mix_up(*waker_p);
+						end.send(0);
+					}
+				}
+			}};
+
 			while(!this->stoken.stop_requested()) {
-				debug_print("looping...");
+				// debug_print("looping...");
 				this->waker->sleep();
 
 				for(Valve * valve : this->valves) {
-					valve->mix_up(*this->waker);
+					while(true) {
+						if(th1_end_recv.try_recv(10ms)) {
+							th1_valv_send.send(+valve);
+							break;
+						}
+						else if(th2_end_recv.try_recv(10ms)) {
+							th2_valv_send.send(+valve);
+							break;
+						}
+					}
 				}
 			}
 		}

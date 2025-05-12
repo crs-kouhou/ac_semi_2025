@@ -1,6 +1,7 @@
 #include <thread>
 #include <iostream>
 #include <syncstream>
+#include <random>
 #include "valve_tap.hpp"
 
 // using ac_semi_2025::valve_tap::impl::debug_print;
@@ -11,6 +12,21 @@ struct PointCloud {};
 struct Pose2d {};
 struct Transform2d {};
 
+struct RandomSleep final {
+	std::mutex eng_mtx{};
+	std::default_random_engine eng{std::random_device{}()};
+	std::uniform_real_distribution<> dist{0.5, 3.0};
+
+	void random_sleep() {
+		const double du = [this] {
+			std::unique_lock lck{this->eng_mtx};
+			return this->dist(this->eng);
+		}();
+		std::this_thread::sleep_for(std::chrono::duration<double>{du});
+	}
+} rand_sleep{};
+
+
 auto icp(PointCloud laser, Pose2d pose, GlobalMap map) noexcept -> std::tuple<Transform2d> {
 	(void) laser;
 	(void) pose;
@@ -18,6 +34,7 @@ auto icp(PointCloud laser, Pose2d pose, GlobalMap map) noexcept -> std::tuple<Tr
 
 	std::osyncstream osy{std::cout};
 	osy << "in icp." << std::endl;
+	rand_sleep.random_sleep();
 
 	Transform2d map2odom{};
 	return map2odom;
@@ -30,6 +47,7 @@ auto odometry(Pose2d twist, Pose2d pose, Transform2d odom2base) noexcept -> std:
 
 	std::osyncstream osy{std::cout};
 	osy << "in odometry." << std::endl;
+	rand_sleep.random_sleep();
 	
 	Transform2d new_odom2base{};
 	return new_odom2base;
