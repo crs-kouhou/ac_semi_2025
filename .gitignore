@@ -1,2 +1,5 @@
 /src/*
 !/src/*.cpp
+/reactive_robot_programming/*
+!/reactive_robot_programming/*.cpp
+!/reactive_robot_programming/*.hpp
